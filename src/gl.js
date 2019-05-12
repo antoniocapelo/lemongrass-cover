@@ -3,6 +3,8 @@ import React, { Component } from "react";
 import { Shaders, Node, GLSL } from "gl-react";
 import { Surface } from "gl-react-dom";
 import color2array from "color2array";
+import timeLoopHOC from "./timeLoopHOC";
+
 
 const getColor = color => {
   const b = color2array(color);
@@ -17,11 +19,12 @@ precision highp float;
 varying vec2 uv;
 uniform vec3 color;
 uniform float aspect;
+uniform float amplitude;
   uniform sampler2D t;
 
 void main() {
  gl_FragColor = vec4(color, 1.0);
- float margin = 0.15;
+ float margin = 0.10;
  vec2 bl = step(vec2(margin),uv);       // bottom-left
 vec2 tr = step(vec2(margin),1.0-uv);   // top-right
 float isInside = 1. - (bl.x * bl.y * tr.x * tr.y);
@@ -31,15 +34,16 @@ center.x *= aspect;
 
 float dist = length(center);
 
-float insideCircle = smoothstep(0.25, 0.2475, dist);
-// vec3 color = mix(colorA, colorB, vUv.x + vUv.y + sin(time * 2.));
+float insideCircle = smoothstep(0.315, 0.3125, dist);
 
-isInside = insideCircle + isInside;
+float drawBg = insideCircle + isInside;
+vec2 distortedUv = uv;
+distortedUv.y += cos(amplitude * (uv.x - 0.5) * 100.) / 30.;
 
   gl_FragColor = mix(
-    texture2D(t, uv),
+    texture2D(t, distortedUv),
     vec4(color, 1.0),
-    isInside
+    drawBg
   );
 
 }`
@@ -62,8 +66,8 @@ void main() {
 // We can make a <HelloBlue blue={0.5} /> that will render the concrete <Node/>
 export class Base extends Component {
   render() {
-    const { color, children: t, aspect } = this.props;
-    return <Node shader={shaders.base} uniforms={{ t, color, aspect }} />;
+    const { color, amplitude, children: t, aspect } = this.props;
+    return <Node shader={shaders.base} uniforms={{ t, color, amplitude, aspect }} />;
   }
 }
 
@@ -76,18 +80,23 @@ export class Lines extends Component {
 }
 
 // Our example will pass the slider value to HelloBlue
-export default class GL extends Component {
+class GL extends Component {
   state = {
     width: 0,
-    height: 0
+    height: 0,
+    amplitude: 0,
   };
   color = "#9cbfa1";
   componentDidMount() {
     window.addEventListener("resize", this.resize);
+    window.addEventListener("keydown", this.up);
+    window.addEventListener("keyup", this.down);
     this.resize();
   }
   componentWillUnmount() {
     window.removeEventListener("resize", this.resize);
+    window.removeEventListener("keydown", this.up);
+    window.removeEventListener("keyup", this.down);
   }
   resize = () => {
     this.setState({
@@ -95,15 +104,40 @@ export default class GL extends Component {
       height: window.innerHeight
     });
   };
+  up = () => {
+    this.setState({
+        amplitude: 1,
+    });
+  };
+  down = () => {
+    this.setState({
+        amplitude: 0,
+    });
+  };
   render() {
+    const { amplitude } = this.state;
+
     return (
+      <>
       <Surface width={this.state.width} height={this.state.height}>
-        <Base color={getColor(this.color)} aspect={this.state.width/this.state.height}>
-        <Lines bgColor={getColor(this.color)} />
+        <Base color={getColor(this.color)} aspect={this.state.width/this.state.height} amplitude={amplitude}>
+        <Lines bgColor={getColor(this.color)}/>
         </Base>
 
       </Surface>
+      <input
+      style={{ position: 'fixed', top: 0, left: 0, width: "400px" }}
+      type="range"
+      min={0}
+      max={1}
+      step={0.01}
+      value={this.state.amplitude}
+      onChange={(ev) => this.setState({ amplitude: ev.target.value })}
+    />
+      </>
     );
   }
   static defaultProps = { blue: 0.5 };
 }
+
+export default timeLoopHOC(GL);
