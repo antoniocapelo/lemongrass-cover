@@ -16,6 +16,7 @@ const shaders = Shaders.create({
 precision highp float;
 varying vec2 uv;
 uniform vec3 color;
+uniform float aspect;
   uniform sampler2D t;
 
 void main() {
@@ -24,9 +25,17 @@ void main() {
  vec2 bl = step(vec2(margin),uv);       // bottom-left
 vec2 tr = step(vec2(margin),1.0-uv);   // top-right
 float isInside = 1. - (bl.x * bl.y * tr.x * tr.y);
-//   gl_FragColor = vec4(colorFinal, 1.);
 
-//   gl_FragColor = texture2D(t, uv);
+vec2 center = uv - 0.5;
+center.x *= aspect;
+
+float dist = length(center);
+
+float insideCircle = smoothstep(0.25, 0.2475, dist);
+// vec3 color = mix(colorA, colorB, vUv.x + vUv.y + sin(time * 2.));
+
+isInside = insideCircle + isInside;
+
   gl_FragColor = mix(
     texture2D(t, uv),
     vec4(color, 1.0),
@@ -53,8 +62,8 @@ void main() {
 // We can make a <HelloBlue blue={0.5} /> that will render the concrete <Node/>
 export class Base extends Component {
   render() {
-    const { color, children: t } = this.props;
-    return <Node shader={shaders.base} uniforms={{ t, color }} />;
+    const { color, children: t, aspect } = this.props;
+    return <Node shader={shaders.base} uniforms={{ t, color, aspect }} />;
   }
 }
 
@@ -89,7 +98,7 @@ export default class GL extends Component {
   render() {
     return (
       <Surface width={this.state.width} height={this.state.height}>
-        <Base color={getColor(this.color)}>
+        <Base color={getColor(this.color)} aspect={this.state.width/this.state.height}>
         <Lines bgColor={getColor(this.color)} />
         </Base>
 
