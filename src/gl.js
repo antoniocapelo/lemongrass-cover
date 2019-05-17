@@ -5,7 +5,6 @@ import { Surface } from "gl-react-dom";
 import color2array from "color2array";
 import timeLoopHOC from "./timeLoopHOC";
 
-
 const getColor = color => {
   const b = color2array(color);
   return [b[0] / 255, b[1] / 255, b[2] / 255];
@@ -20,6 +19,7 @@ varying vec2 uv;
 uniform vec3 color;
 uniform float aspect;
 uniform float amplitude;
+uniform float time;
   uniform sampler2D t;
 
 void main() {
@@ -60,14 +60,16 @@ void main() {
   pct = step(f, 0.5);
   gl_FragColor = vec4(mix(color, bgColor, pct), 1.0);
 }`
-  },
+  }
 });
 
 // We can make a <HelloBlue blue={0.5} /> that will render the concrete <Node/>
 export class Base extends Component {
   render() {
-    const { color, amplitude, children: t, aspect } = this.props;
-    return <Node shader={shaders.base} uniforms={{ t, color, amplitude, aspect }} />;
+    const { color, amplitude, children: t, aspect, time } = this.props;
+    return (
+      <Node shader={shaders.base} uniforms={{ t, color, amplitude, aspect, time }} />
+    );
   }
 }
 
@@ -75,16 +77,18 @@ export class Base extends Component {
 export class Lines extends Component {
   render() {
     const { bgColor } = this.props;
-    return <Node shader={shaders.lines} uniforms={{bgColor}}/>;
+    return <Node shader={shaders.lines} uniforms={{ bgColor }} />;
   }
 }
+
+const initialAmp = 0.2;
 
 // Our example will pass the slider value to HelloBlue
 class GL extends Component {
   state = {
     width: 0,
     height: 0,
-    amplitude: 0,
+    amplitude: initialAmp
   };
   color = "#9cbfa1";
   componentDidMount() {
@@ -106,34 +110,41 @@ class GL extends Component {
   };
   up = () => {
     this.setState({
-        amplitude: 1,
+      amplitude: 1
     });
   };
   down = () => {
     this.setState({
-        amplitude: 0,
+      amplitude: initialAmp
     });
   };
   render() {
     const { amplitude } = this.state;
+    // const { time } = this.props;
+    const time = performance.now() / 2000
+
 
     return (
       <>
-      <Surface width={this.state.width} height={this.state.height}>
-        <Base color={getColor(this.color)} aspect={this.state.width/this.state.height} amplitude={amplitude}>
-        <Lines bgColor={getColor(this.color)}/>
-        </Base>
-
-      </Surface>
-      <input
-      style={{ position: 'fixed', top: 0, left: 0, width: "400px" }}
-      type="range"
-      min={0}
-      max={1}
-      step={0.01}
-      value={this.state.amplitude}
-      onChange={(ev) => this.setState({ amplitude: ev.target.value })}
-    />
+        <Surface width={this.state.width} height={this.state.height}>
+          <Base
+            color={getColor(this.color)}
+            aspect={this.state.width / this.state.height}
+            amplitude={amplitude}
+            time={time}
+          >
+            <Lines bgColor={getColor(this.color)} />
+          </Base>
+        </Surface>
+        <input
+          style={{ position: "fixed", top: 0, left: 0, width: "400px" }}
+          type="range"
+          min={0}
+          max={1}
+          step={0.01}
+          value={this.state.amplitude}
+          onChange={ev => this.setState({ amplitude: ev.target.value })}
+        />
       </>
     );
   }

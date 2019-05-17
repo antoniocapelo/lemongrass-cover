@@ -1,4 +1,3 @@
-//@flow
 import React, { PureComponent } from "react";
 import raf from "raf";
 import hoistNonReactStatics from "hoist-non-react-statics";
