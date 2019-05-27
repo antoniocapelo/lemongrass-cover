@@ -36,7 +36,7 @@ const shaders = Shaders.create({
         vec2 center = uv - 0.5;
         center.x *= aspect;
 
-        // check if pixel is inside radius of around 0.315, comparing it with 
+        // check if pixel is inside radius, comparing it with 
         // the distance to the center
         float dist = length(center);
         float insideCircle = smoothstep(0.315, 0.3125, dist);
@@ -167,7 +167,7 @@ class GL extends Component {
             time={time}
           >
             <Lines bgColor={getColor(this.color)} len={len} aspect={this.state.width / this.state.height} >
-              <Text size={{width, height}} text={'yoyo'} bgColor={this.color}/>
+              <Text size={{width, height}} text="Stereo Tipo" bgColor={this.color}/>
             </Lines>
           </Base>
         </Surface>
@@ -186,13 +186,37 @@ class GL extends Component {
   static defaultProps = { blue: 0.5 };
 }
 
-const font = "16px bold Helvetica";
-const fontTitle = "32px bold Helvetica";
+const font = "16px bold Times";
+const fontTitle = `bold 32px "Fjalla One"`;
+
 const lineHeight = 40;
 
 class Text extends React.PureComponent {
+  state = {
+    ready: false,
+  }
+
+  async componentDidMount() {
+    const subtitleFontUrl = 'https://fonts.gstatic.com/s/tangerine/v10/Iurd6Y5j_oScZZow4VO5srNZi5FNym499g.woff2';
+    const subtitleFont = new window.FontFace(
+      'Tangerine-bold',
+      `url(${subtitleFontUrl})`
+    );
+    const fjallaFontUrl = 'https://fonts.gstatic.com/s/fjallaone/v6/Yq6R-LCAWCX3-6Ky7FAFrOF6kjouQb4.woff2';
+    const fjallaFont = new window.FontFace(
+      'Fjalla One',
+      `url(${fjallaFontUrl})`
+    );
+  
+    await subtitleFont.load();
+    await fjallaFont.load();
+    document.fonts.add(subtitleFont);
+    document.fonts.add(fjallaFont); 
+    this.setState({ ready: true })
+  }
   render() {
     const {size, text, bgColor} = this.props;
+    const finalText = this.state.ready ? text : ''; 
 
     return (
     // Text is a PureComponent that renders a LinearCopy
@@ -208,7 +232,7 @@ class Text extends React.PureComponent {
             fillStyle: "#fff",
             font: fontTitle,
           },
-          [ "fillText", 'Lemongrass', size.width/2, size.height/2, lineHeight ],
+          [ "fillText", finalText, size.width/2, size.height/2, lineHeight ],
           {
             textAlign: "center",
             fillStyle: "#fff",
