@@ -20,31 +20,50 @@ const shaders = Shaders.create({
       uniform float amplitude;
       uniform sampler2D t;
 
+      // Random fn for grain effect
+      float rand(vec2 co) {
+        return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+      }
+
       void main() {
-      gl_FragColor = vec4(color, 1.0);
-      float margin = 0.10;
-      vec2 bl = step(vec2(margin),uv);       // bottom-left
-      vec2 tr = step(vec2(margin),1.0-uv);   // top-right
-      float isInsideMargin = 1. - (bl.x * bl.y * tr.x * tr.y);
+        // bottom-left and top-right margins
+        float margin = 0.10;
+        vec2 bl = step(vec2(margin),uv);
+        vec2 tr = step(vec2(margin),1.0-uv);
+        float isInsideMargin = 1. - (bl.x * bl.y * tr.x * tr.y);
 
-      vec2 center = uv - 0.5;
-      center.x *= aspect;
+        // center point, with aspecto ratio correction
+        vec2 center = uv - 0.5;
+        center.x *= aspect;
 
-      float dist = length(center);
+        // check if pixel is inside radius of around 0.315, comparing it with 
+        // the distance to the center
+        float dist = length(center);
+        float insideCircle = smoothstep(0.315, 0.3125, dist);
 
-      float insideCircle = smoothstep(0.315, 0.3125, dist);
+        // For vertical effect distortion
+        vec2 distortedUv = uv;
+        distortedUv.y += cos(amplitude * (uv.x - 0.5) * 100.) / 30.;
 
-      float drawBg = insideCircle + isInsideMargin;
-      drawBg = isInsideMargin;
-      vec2 distortedUv = uv;
-      distortedUv.y += cos(amplitude * (uv.x - 0.5) * 100.) / 30.;
+        // Final color will the child texture or the regular background,
+        // depending if it's inside the margin 
+        vec4 finalColor = mix(
+          texture2D(t, distortedUv),
+          vec4(color, 1.0),
+          isInsideMargin
+        ); 
+        
+        // Let's apply the grain
+        float amount = 0.08;
 
-      gl_FragColor = mix(
-        texture2D(t, distortedUv),
-        vec4(color, 1.0),
-        drawBg
-      ); 
-    }`
+        float diff = (rand(center) - 0.5) * amount;
+        finalColor.r += diff;
+        finalColor.g += diff;
+        finalColor.b += diff;
+
+        gl_FragColor= finalColor;
+      }
+    `
   },
   lines: {
     frag: GLSL`
@@ -71,14 +90,7 @@ const shaders = Shaders.create({
         vec4 middle = mix(vec4(bgColor, 1.), texture2D(t, uv), insideCircle);
         vec4 horizontalLines = mix(vec4(color, 1.0 - insideCircle), middle, pct);
   
-        // gl_FragColor = mix(vec4(color, 1.0 - insideCircle), middle, pct);
-        // gl_FragColor = middle;
-        // gl_FragColor = mix(vec4(color, 1.0 - insideCircle), vec4(1., 1., 0., insideCircle), pct);
         gl_FragColor = mix(horizontalLines, middle, insideCircle);
-        // gl_FragColor =  vec4(0., 0., 0., 0.);
-        // gl_FragColor =  vec4(bgColor, 0.9);
-
-        // gl_FragColor = vec4(bgColor, 1.0);
       }`
   }
 });
