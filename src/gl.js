@@ -1,7 +1,8 @@
 import React, { Component } from "react";
-import { Shaders, Node, GLSL } from "gl-react";
+import { Shaders, Node, GLSL, LinearCopy } from "gl-react";
 import { Surface } from "gl-react-dom";
 import color2array from "color2array";
+import JSON2D from "react-json2d";
 import timeLoopHOC from "./timeLoopHOC";
 
 const getColor = color => {
@@ -24,7 +25,7 @@ const shaders = Shaders.create({
       float margin = 0.10;
       vec2 bl = step(vec2(margin),uv);       // bottom-left
       vec2 tr = step(vec2(margin),1.0-uv);   // top-right
-      float isInside = 1. - (bl.x * bl.y * tr.x * tr.y);
+      float isInsideMargin = 1. - (bl.x * bl.y * tr.x * tr.y);
 
       vec2 center = uv - 0.5;
       center.x *= aspect;
@@ -33,7 +34,8 @@ const shaders = Shaders.create({
 
       float insideCircle = smoothstep(0.315, 0.3125, dist);
 
-      float drawBg = insideCircle + isInside;
+      float drawBg = insideCircle + isInsideMargin;
+      drawBg = isInsideMargin;
       vec2 distortedUv = uv;
       distortedUv.y += cos(amplitude * (uv.x - 0.5) * 100.) / 30.;
 
@@ -50,6 +52,8 @@ const shaders = Shaders.create({
       uniform vec3 bgColor;
       varying vec2 uv;
       uniform float len;
+      uniform float aspect;
+      uniform sampler2D t;
 
       void main() {
         vec3 color = mix(vec3(1., 1., 1.), bgColor, 1. - uv.y);
@@ -57,7 +61,23 @@ const shaders = Shaders.create({
         float pct = step(f, 0.5);
         pct = step(step(uv.x, len), pct);
         pct = step(step(1.-len, uv.x), pct);
-        gl_FragColor = vec4(mix(color, bgColor, pct), 1.0);
+
+        vec2 center = uv - 0.5;
+        center.x *= aspect;
+  
+        float dist = length(center);
+  
+        float insideCircle = smoothstep(0.315, 0.3125, dist);
+        vec4 middle = mix(vec4(bgColor, 1.), texture2D(t, uv), insideCircle);
+        vec4 horizontalLines = mix(vec4(color, 1.0 - insideCircle), middle, pct);
+  
+        // gl_FragColor = mix(vec4(color, 1.0 - insideCircle), middle, pct);
+        // gl_FragColor = middle;
+        // gl_FragColor = mix(vec4(color, 1.0 - insideCircle), vec4(1., 1., 0., insideCircle), pct);
+        gl_FragColor = mix(horizontalLines, middle, insideCircle);
+        // gl_FragColor =  vec4(0., 0., 0., 0.);
+        // gl_FragColor =  vec4(bgColor, 0.9);
+
         // gl_FragColor = vec4(bgColor, 1.0);
       }`
   }
@@ -76,8 +96,8 @@ export class Base extends Component {
 // We can make a <HelloBlue blue={0.5} /> that will render the concrete <Node/>
 export class Lines extends Component {
   render() {
-    const { bgColor, len } = this.props;
-    return <Node shader={shaders.lines} uniforms={{ bgColor, len }} />;
+    const { bgColor, len, children: t, aspect } = this.props;
+    return <Node shader={shaders.lines} uniforms={{ aspect, bgColor, len, t }} />;
   }
 }
 
@@ -123,26 +143,28 @@ class GL extends Component {
     const { amplitude, len } = this.state;
     // const { time } = this.props;
     const time = performance.now() / 2000;
-    console.log(len);
+    const { width, height } = this.state;
 
     return (
       <>
-        <Surface width={this.state.width} height={this.state.height}>
+        <Surface width={width} height={height}>
           <Base
             color={getColor(this.color)}
             aspect={this.state.width / this.state.height}
             amplitude={amplitude} 
             time={time}
           >
-            <Lines bgColor={getColor(this.color)} len={len}/>
+            <Lines bgColor={getColor(this.color)} len={len} aspect={this.state.width / this.state.height} >
+              <Text size={{width, height}} text={'yoyo'} bgColor={this.color}/>
+            </Lines>
           </Base>
         </Surface>
         <input
           style={{ position: "fixed", top: 0, left: 0, width: "400px" }}
           type="range"
-          min={0}
+          min={0.5}
           max={1}
-          step={0.01}
+          step={0.005}
           value={this.state.len}
           onChange={ev => this.setState({ len: ev.target.value })}
         />
@@ -150,6 +172,43 @@ class GL extends Component {
     );
   }
   static defaultProps = { blue: 0.5 };
+}
+
+const font = "16px bold Helvetica";
+const fontTitle = "32px bold Helvetica";
+const lineHeight = 40;
+
+class Text extends React.PureComponent {
+  render() {
+    const {size, text, bgColor} = this.props;
+
+    return (
+    // Text is a PureComponent that renders a LinearCopy
+    // that will cache the canvas content for more efficiency
+    <LinearCopy>
+      <JSON2D {...size}>
+      {{
+        background: bgColor,
+        size: [ size.width, size.height ],
+        draws: [
+          {
+            textAlign: "center",
+            fillStyle: "#fff",
+            font: fontTitle,
+          },
+          [ "fillText", 'Lemongrass', size.width/2, size.height/2, lineHeight ],
+          {
+            textAlign: "center",
+            fillStyle: "#fff",
+            font,
+          },
+          [ "fillText", 'Stereo Tipo', size.width/2, size.height/2 + 20, lineHeight ],
+        ],
+      }}
+      </JSON2D>
+    </LinearCopy>
+    );
+  }
 }
 
 export default (GL);
