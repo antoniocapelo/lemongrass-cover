@@ -18,6 +18,7 @@ const shaders = Shaders.create({
       uniform vec3 color;
       uniform float aspect;
       uniform float amplitude;
+      uniform float radius;
       uniform sampler2D t;
 
       // Random fn for grain effect
@@ -39,7 +40,7 @@ const shaders = Shaders.create({
         // check if pixel is inside radius, comparing it with 
         // the distance to the center
         float dist = length(center);
-        float insideCircle = smoothstep(0.315, 0.3125, dist);
+        float insideCircle = smoothstep(radius, radius * 0.99, dist);
 
         // For vertical effect distortion
         vec2 distortedUv = uv;
@@ -73,6 +74,7 @@ const shaders = Shaders.create({
       uniform float len;
       uniform float aspect;
       uniform sampler2D t;
+      uniform float radius;
 
       void main() {
         vec3 color = mix(vec3(1., 1., 1.), bgColor, 1. - uv.y);
@@ -86,7 +88,8 @@ const shaders = Shaders.create({
   
         float dist = length(center);
   
-        float insideCircle = smoothstep(0.315, 0.3125, dist);
+        // float insideCircle = smoothstep(0.315, 0.3125, dist);
+        float insideCircle = smoothstep(radius, radius * 0.99, dist);
         vec4 middle = mix(vec4(bgColor, 1.), texture2D(t, uv), insideCircle);
         vec4 horizontalLines = mix(vec4(color, 1.0 - insideCircle), middle, pct);
   
@@ -98,9 +101,10 @@ const shaders = Shaders.create({
 // We can make a <HelloBlue blue={0.5} /> that will render the concrete <Node/>
 export class Base extends Component {
   render() {
-    const { color, amplitude, children: t, aspect } = this.props;
+    const { color, amplitude, children: t, aspect, radius } = this.props;
+    console.log({ radius });
     return (
-      <Node shader={shaders.base} uniforms={{ t, color, amplitude, aspect }} />
+      <Node shader={shaders.base} uniforms={{ t, color, amplitude, aspect, radius }} />
     );
   }
 }
@@ -108,8 +112,8 @@ export class Base extends Component {
 // We can make a <HelloBlue blue={0.5} /> that will render the concrete <Node/>
 export class Lines extends Component {
   render() {
-    const { bgColor, len, children: t, aspect } = this.props;
-    return <Node shader={shaders.lines} uniforms={{ aspect, bgColor, len, t }} />;
+    const { bgColor, len, children: t, aspect, radius } = this.props;
+    return <Node shader={shaders.lines} uniforms={{ radius, aspect, bgColor, len, t }} />;
   }
 }
 
@@ -163,10 +167,11 @@ class GL extends Component {
           <Base
             color={getColor(this.color)}
             aspect={this.state.width / this.state.height}
+            radius={this.state.width > 768 ? 0.315 : 0.15}
             amplitude={amplitude} 
             time={time}
           >
-            <Lines bgColor={getColor(this.color)} len={len} aspect={this.state.width / this.state.height} >
+            <Lines radius={this.state.width > 768 ? 0.315 : 0.15} bgColor={getColor(this.color)} len={len} aspect={this.state.width / this.state.height} >
               <Text size={{width, height}} text="Stereo Tipo" bgColor={this.color}/>
             </Lines>
           </Base>
