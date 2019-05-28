@@ -1,3 +1,4 @@
+//@flow
 import React, { PureComponent } from "react";
 import raf from "raf";
 import hoistNonReactStatics from "hoist-non-react-statics";
@@ -8,11 +9,11 @@ export default (
   { refreshRate = 60 }: { refreshRate?: number } = {}
 ): ReactClass<*> => {
   class TL extends PureComponent {
-    static displayName = `timeLoop(${C.displayName||C.name||""})`;
+    static displayName = `timeLoop(${C.displayName || C.name || ""})`;
     state: { time: number };
     state = {
       time: 0,
-      tick: 0,
+      tick: 0
     };
     _r: any;
     componentDidMount() {
@@ -26,8 +27,8 @@ export default (
           lastTime = t;
           this.setState({
             time: t - startTime,
-            timeDiff: (t-startTime)-this.state.time,
-            tick: this.state.tick + 1,
+            timeDiff: t - startTime - this.state.time,
+            tick: this.state.tick + 1
           });
         }
       };
@@ -37,10 +38,7 @@ export default (
       raf.cancel(this._r);
     }
     render() {
-      return <C
-        {...this.props}
-        {...this.state}
-      />;
+      return <C {...this.props} {...this.state} />;
     }
   }
 

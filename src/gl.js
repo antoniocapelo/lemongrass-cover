@@ -18,7 +18,6 @@ const shaders = Shaders.create({
       uniform vec3 color;
       uniform float aspect;
       uniform float amplitude;
-      uniform float radius;
       uniform sampler2D t;
 
       // Random fn for grain effect
@@ -33,14 +32,9 @@ const shaders = Shaders.create({
         vec2 tr = step(vec2(margin),1.0-uv);
         float isInsideMargin = 1. - (bl.x * bl.y * tr.x * tr.y);
 
-        // center point, with aspecto ratio correction
+        // center point, with aspect ratio correction
         vec2 center = uv - 0.5;
         center.x *= aspect;
-
-        // check if pixel is inside radius, comparing it with 
-        // the distance to the center
-        float dist = length(center);
-        float insideCircle = smoothstep(radius, radius * 0.99, dist);
 
         // For vertical effect distortion
         vec2 distortedUv = uv;
@@ -55,7 +49,7 @@ const shaders = Shaders.create({
         ); 
         
         // Let's apply the grain
-        float amount = 0.08;
+        float amount = 0.05;
 
         float diff = (rand(center) - 0.5) * amount;
         finalColor.r += diff;
@@ -78,7 +72,8 @@ const shaders = Shaders.create({
 
       void main() {
         vec3 color = mix(vec3(1., 1., 1.), bgColor, 1. - uv.y);
-        float f = fract(uv.y * 40.) * 0.57;  
+        // Let's try to use 42 horizontal lines, with a width of 0.57
+        float f = fract(uv.y * 42.) * 0.57;  
         float pct = step(f, 0.5);
         pct = step(step(uv.x, len), pct);
         pct = step(step(1.-len, uv.x), pct);
@@ -86,10 +81,11 @@ const shaders = Shaders.create({
         vec2 center = uv - 0.5;
         center.x *= aspect;
   
+        // check if pixel is inside radius, comparing it with 
+        // the distance to the center
         float dist = length(center);
   
-        // float insideCircle = smoothstep(0.315, 0.3125, dist);
-        float insideCircle = smoothstep(radius, radius * 0.99, dist);
+        float insideCircle = smoothstep(radius, radius * 0.999, dist);
         vec4 middle = mix(vec4(bgColor, 1.), texture2D(t, uv), insideCircle);
         vec4 horizontalLines = mix(vec4(color, 1.0 - insideCircle), middle, pct);
   
@@ -101,10 +97,10 @@ const shaders = Shaders.create({
 // We can make a <HelloBlue blue={0.5} /> that will render the concrete <Node/>
 export class Base extends Component {
   render() {
-    const { color, amplitude, children: t, aspect, radius } = this.props;
-    console.log({ radius });
+    const { color, amplitude, children: t, aspect } = this.props;
+
     return (
-      <Node shader={shaders.base} uniforms={{ t, color, amplitude, aspect, radius }} />
+      <Node shader={shaders.base} uniforms={{ t, color, amplitude, aspect }} />
     );
   }
 }
@@ -179,7 +175,7 @@ class GL extends Component {
         <input
           style={{ position: "fixed", top: 0, left: 0, width: "400px" }}
           type="range"
-          min={0.5}
+          min={0.45}
           max={1}
           step={0.005}
           value={this.state.len}
