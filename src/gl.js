@@ -4,6 +4,13 @@ import { Surface } from "gl-react-dom";
 import color2array from "color2array";
 import timeLoopHOC from "./timeLoopHOC";
 import { Text } from "./Text";
+import { delay } from "q";
+
+let Animate;
+if (typeof window !== `undefined`) {
+  const animateLib = require("@oframe/animate");
+  Animate = animateLib.Animate;
+}
 
 const getColor = color => {
   const b = color2array(color);
@@ -126,7 +133,7 @@ class GL extends Component {
     width: 0,
     height: 0,
     amplitude: initialAmp,
-    len: 1,
+    len: 0,
     textReady: false
   };
   color = "#9cbfa1";
@@ -163,6 +170,17 @@ class GL extends Component {
   onTextReady = () => {
     console.log("text ready");
     this.setState({ textReady: true });
+    const obj = {
+      len: 0.45
+    };
+    new Animate(obj, 1800, {
+      len: 1,
+      delay: 500,
+      ease: "inOutCirc",
+      update: () => {
+        this.setState({ len: obj.len });
+      }
+    });
   };
   render() {
     const { amplitude, len, textReady } = this.state;
@@ -197,16 +215,6 @@ class GL extends Component {
             </Base>
           </Surface>
         </div>
-
-        <input
-          style={{ position: "fixed", top: 0, left: 0, width: "400px" }}
-          type="range"
-          min={0.45}
-          max={1}
-          step={0.005}
-          value={this.state.len}
-          onChange={ev => this.setState({ len: ev.target.value })}
-        />
       </>
     );
   }
