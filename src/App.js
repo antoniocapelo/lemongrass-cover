@@ -7,6 +7,7 @@ function App() {
   return (
     <div className="App">
     <GL />
+    <h2>and now more text</h2>
     </div>
   );
 }

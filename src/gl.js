@@ -1,9 +1,9 @@
 import React, { Component } from "react";
-import { Shaders, Node, GLSL, LinearCopy } from "gl-react";
+import { Shaders, Node, GLSL } from "gl-react";
 import { Surface } from "gl-react-dom";
 import color2array from "color2array";
-import JSON2D from "react-json2d";
 import timeLoopHOC from "./timeLoopHOC";
+import { Text } from "./Text";
 
 const getColor = color => {
   const b = color2array(color);
@@ -109,7 +109,12 @@ export class Base extends Component {
 export class Lines extends Component {
   render() {
     const { bgColor, len, children: t, aspect, radius } = this.props;
-    return <Node shader={shaders.lines} uniforms={{ radius, aspect, bgColor, len, t }} />;
+    return (
+      <Node
+        shader={shaders.lines}
+        uniforms={{ radius, aspect, bgColor, len, t }}
+      />
+    );
   }
 }
 
@@ -122,6 +127,7 @@ class GL extends Component {
     height: 0,
     amplitude: initialAmp,
     len: 1,
+    textReady: false
   };
   color = "#9cbfa1";
   componentDidMount() {
@@ -151,27 +157,47 @@ class GL extends Component {
       amplitude: initialAmp
     });
   };
+  getRadius = () => {
+    return this.state.width > 768 ? 0.315 : 0.15;
+  };
+  onTextReady = () => {
+    console.log("text ready");
+    this.setState({ textReady: true });
+  };
   render() {
-    const { amplitude, len } = this.state;
-    // const { time } = this.props;
-    const time = performance.now() / 2000;
+    const { amplitude, len, textReady } = this.state;
     const { width, height } = this.state;
 
     return (
       <>
-        <Surface width={width} height={height}>
-          <Base
-            color={getColor(this.color)}
-            aspect={this.state.width / this.state.height}
-            radius={this.state.width > 768 ? 0.315 : 0.15}
-            amplitude={amplitude} 
-            time={time}
-          >
-            <Lines radius={this.state.width > 768 ? 0.315 : 0.15} bgColor={getColor(this.color)} len={len} aspect={this.state.width / this.state.height} >
-              <Text size={{width, height}} text="Stereo Tipo" bgColor={this.color}/>
-            </Lines>
-          </Base>
-        </Surface>
+        <div
+          style={{ opacity: textReady ? 1 : 0, transition: "opacity 1s ease" }}
+        >
+          <Surface width={width} height={height}>
+            <Base
+              color={getColor(this.color)}
+              aspect={this.state.width / this.state.height}
+              radius={this.state.width > 768 ? 0.315 : 0.15}
+              amplitude={amplitude}
+            >
+              <Lines
+                radius={this.getRadius()}
+                bgColor={getColor(this.color)}
+                len={len}
+                aspect={this.state.width / this.state.height}
+              >
+                <Text
+                  size={{ width, height }}
+                  title="Stereo Tipo"
+                  subtitle="Lemongrass"
+                  bgColor={this.color}
+                  onReady={this.onTextReady}
+                />
+              </Lines>
+            </Base>
+          </Surface>
+        </div>
+
         <input
           style={{ position: "fixed", top: 0, left: 0, width: "400px" }}
           type="range"
@@ -187,65 +213,4 @@ class GL extends Component {
   static defaultProps = { blue: 0.5 };
 }
 
-const font = "16px bold Times";
-const fontTitle = `bold 32px "Fjalla One"`;
-
-const lineHeight = 40;
-
-class Text extends React.PureComponent {
-  state = {
-    ready: false,
-  }
-
-  async componentDidMount() {
-    const subtitleFontUrl = 'https://fonts.gstatic.com/s/tangerine/v10/Iurd6Y5j_oScZZow4VO5srNZi5FNym499g.woff2';
-    const subtitleFont = new window.FontFace(
-      'Tangerine-bold',
-      `url(${subtitleFontUrl})`
-    );
-    const fjallaFontUrl = 'https://fonts.gstatic.com/s/fjallaone/v6/Yq6R-LCAWCX3-6Ky7FAFrOF6kjouQb4.woff2';
-    const fjallaFont = new window.FontFace(
-      'Fjalla One',
-      `url(${fjallaFontUrl})`
-    );
-  
-    await subtitleFont.load();
-    await fjallaFont.load();
-    document.fonts.add(subtitleFont);
-    document.fonts.add(fjallaFont); 
-    this.setState({ ready: true })
-  }
-  render() {
-    const {size, text, bgColor} = this.props;
-    const finalText = this.state.ready ? text : ''; 
-
-    return (
-    // Text is a PureComponent that renders a LinearCopy
-    // that will cache the canvas content for more efficiency
-    <LinearCopy>
-      <JSON2D {...size}>
-      {{
-        background: bgColor,
-        size: [ size.width, size.height ],
-        draws: [
-          {
-            textAlign: "center",
-            fillStyle: "#fff",
-            font: fontTitle,
-          },
-          [ "fillText", finalText, size.width/2, size.height/2, lineHeight ],
-          {
-            textAlign: "center",
-            fillStyle: "#fff",
-            font,
-          },
-          [ "fillText", 'Stereo Tipo', size.width/2, size.height/2 + 20, lineHeight ],
-        ],
-      }}
-      </JSON2D>
-    </LinearCopy>
-    );
-  }
-}
-
-export default (GL);
+export default GL;
